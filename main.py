@@ -51,7 +51,7 @@ def download_short(video_id):
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'match_filter': yt_dlp.utils.match_filter_func("duration <= 65"),
+        'match_filter': yt_dlp.utils.match_filter_func("duration <= 180"),
         'quiet': False
     }
     
@@ -109,7 +109,7 @@ def main():
             os.remove(VIDEO_FILENAME)
             print(f"[CLEANUP] تم رفع وحذف الفيديو {VIDEO_FILENAME} وتحديث السجل.")
     else:
-        print("[SKIP] تم تخطي الفيديو (ربما ليس شورتس أو فشل التحميل). تسجيله لتجاهله مستقبلاً.")
+        print("[SKIP] تم تخطي الفيديو (فشل التحميل أو أطول من 3 دقائق). تسجيله لتجاهله مستقبلاً.")
         save_to_history(video_id)
 
 if __name__ == "__main__":
