@@ -20,13 +20,12 @@ def save_to_history(video_id):
         f.write(video_id + "\n")
 
 def fetch_channel_videos():
-    """سحب جميع روابط فيديوهات القناة تلقائياً مباشرة بدون ملفات خارجية"""
+    """سحب جميع روابط فيديوهات القناة تلقائياً بدون تعقيدات"""
     print(f"[FETCH] جاري سحب روابط الفيديوهات من القناة: {SOURCE_CHANNEL}...")
     
     ydl_opts = {
         'extract_flat': True,
         'quiet': True,
-        'impersonate': 'chrome',
     }
     
     video_urls = []
@@ -40,7 +39,6 @@ def fetch_channel_videos():
     except Exception as e:
         print(f"[ERROR] خطأ في جلب الفيديوهات من القناة: {e}")
         
-    # تصفية الفيديوهات التي تم رفعها مسبقاً
     history = get_downloaded_history()
     new_videos = [url for url in video_urls if url not in history]
     
@@ -52,11 +50,8 @@ def download_video(video_url):
         'outtmpl': VIDEO_FILENAME,
         'format': 'best/best',
         'quiet': False,
-        # محاكاة متصفح حقيقي لتخطي حظر تيك توك على السيرفرات السحابية
-        'impersonate': 'chrome',
     }
 
-    # استخدام كوكيز تيك توك أثناء التحميل لتخطي حماية السيرفرات
     if os.path.exists("cookies.txt") and os.path.getsize("cookies.txt") > 0:
         ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -83,7 +78,7 @@ def upload_to_tiktok(video_path, title, schedule_time=None):
     if schedule_time:
         formatted_time = schedule_time.strftime("%Y-%m-%d %H:%M")
         command.extend(["-s", formatted_time])
-        print(f"[SCHEDULE] تم جدولة الفيديو ليُنشر في: {formatted_time}")
+        print(f"[SCHEDULE] سيتم جدولة الفيديو ليُنشر في: {formatted_time}")
     else:
         print(f"[PUBLIC] سيتم نشر الفيديو للعامة فوراً.")
 
@@ -106,7 +101,6 @@ def main():
     print(f"تم العثور على {total_videos} فيديو. البدء في جدولتها لتغطي شهر كاملاً...")
     
     now = datetime.now()
-    # توزيع الفيديوهات على مدار 30 يوماً (720 ساعة) بفاصل زمني دقيق
     total_minutes_in_month = 30 * 24 * 60
     interval_minutes = total_minutes_in_month / total_videos if total_videos > 0 else 64
     
