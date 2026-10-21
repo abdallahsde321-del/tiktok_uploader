@@ -54,12 +54,11 @@ def download_video(video_id):
     print(f"[DOWNLOAD] جاري تحميل الفيديو: {video_id}...")
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'format': 'best[ext=mp4]/best', # تحميل فيديو جاهز بصيغة mp4 بدون الحاجة لدمج ffmpeg
         'js_runtimes': {'deno': {}, 'node': {}},
         'quiet': False
     }
     
-    # تفعيل ملف كوكيز يوتيوب لتجاوز حماية الروبوتات نهائياً
     if os.path.exists("youtube_cookies.txt") and os.path.getsize("youtube_cookies.txt") > 0:
         ydl_opts['cookiefile'] = 'youtube_cookies.txt'
 
