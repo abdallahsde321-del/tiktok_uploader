@@ -59,6 +59,7 @@ def download_video(video_id):
         'quiet': False
     }
     
+    # تفعيل ملف كوكيز يوتيوب لتجاوز حماية الروبوتات نهائياً
     if os.path.exists("youtube_cookies.txt") and os.path.getsize("youtube_cookies.txt") > 0:
         ydl_opts['cookiefile'] = 'youtube_cookies.txt'
 
@@ -109,7 +110,7 @@ def main():
         print("لا يوجد فيديوهات جديدة لرفعها.")
         return
         
-    print(f"تم العثور على {len(videos_to_upload)} فيديو. البدء في معالجتها وجدولتها لتغطي شهر كاملاً...")
+    print(f"تم العثور على {len(videos_to_upload)} فيديو. البدء في معالجتها وجدولتها...")
     
     now = datetime.now()
     
@@ -122,9 +123,8 @@ def main():
         is_downloaded = download_video(v_id)
         
         if is_downloaded:
-            # توزيع الـ 180 فيديو على مدار الشهر (بمعدل 6 فيديوهات يومياً = فاصل 4 ساعات بين كل فيديو والذي يليه)
             if index == 0:
-                schedule_time = None # أول فيديو ينشر فوراً
+                schedule_time = None 
             else:
                 schedule_time = now + timedelta(hours=4 * index)
                 
@@ -143,7 +143,7 @@ def main():
             print(f"[SKIP] تخطي الفيديو {v_id} بسبب فشل التحميل.")
             save_to_history(v_id)
 
-    print(f"\n=== انتهت عملية رفع وجدولة الـ 180 فيديو لتغطي الشهر بالكامل بنجاح! ===")
+    print(f"\n=== انتهت العملية بنجاح! ===")
 
 if __name__ == "__main__":
     main()
