@@ -51,12 +51,10 @@ def download_short(video_id):
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        # تمت إزالة فلتر الوقت نهائياً، سيتم تحميل أي فيديو بغض النظر عن مدته
-        'js_runtimes': 'deno,node', # إضافة دعم فك التشفير
+        'js_runtimes': {'deno': {}, 'node': {}},
         'quiet': False
     }
     
-    # سيستخدم الكوكيز فقط إذا قمت بتحديثها، وإلا سيعتمد على Deno
     if os.path.exists("youtube_cookies.txt") and os.path.getsize("youtube_cookies.txt") > 0:
         ydl_opts['cookiefile'] = 'youtube_cookies.txt'
 
