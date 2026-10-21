@@ -2,7 +2,6 @@ name: TikTok Shorts Auto-Uploader
 
 on:
   schedule:
-    # التشغيل كل 6 ساعات
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
@@ -15,6 +14,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js v22 (Required by yt-dlp)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Set up Python
         uses: actions/setup-python@v5
