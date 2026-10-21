@@ -52,10 +52,14 @@ def download_short(video_id):
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'match_filter': yt_dlp.utils.match_filter_func("duration <= 65"),
-        # هذه الإضافة ضرورية لتخطي حماية يوتيوب للروبوتات
         'extractor_args': {'youtube': {'player_client': ['ios', 'android']}},
         'quiet': False
     }
+    
+    # تفعيل الكوكيز الخاصة بيوتيوب إذا كان الملف موجوداً
+    if os.path.exists("youtube_cookies.txt"):
+        ydl_opts['cookiefile'] = 'youtube_cookies.txt'
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
