@@ -52,7 +52,6 @@ def download_short(video_id):
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'match_filter': yt_dlp.utils.match_filter_func("duration <= 65"),
-        'extractor_args': {'youtube': {'player_client': ['ios', 'android']}},
         'quiet': False
     }
     
