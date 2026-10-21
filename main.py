@@ -23,7 +23,6 @@ def save_to_history(video_id):
         f.write(video_id + "\n")
 
 def get_unuploaded_videos(history):
-    """جلب آخر 50 فيديو من القناة والبحث عن فيديو لم يتم رفعه"""
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     
     request = youtube.playlistItems().list(
@@ -36,7 +35,6 @@ def get_unuploaded_videos(history):
     if not response.get("items"):
         return None, None
 
-    # البحث من الأقدم للأحدث في آخر 50 فيديو
     items = reversed(response["items"]) 
     
     for item in items:
@@ -49,12 +47,13 @@ def get_unuploaded_videos(history):
     return None, None
 
 def download_short(video_id):
-    """تحميل الفيديو مع التأكد من أنه شورتس (أقل من 65 ثانية)"""
     print(f"[DOWNLOAD] جاري فحص وتحميل الفيديو: {video_id}...")
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'match_filter': yt_dlp.utils.match_filter_func("duration <= 65"),
+        # هذه الإضافة ضرورية لتخطي حماية يوتيوب للروبوتات
+        'extractor_args': {'youtube': {'player_client': ['ios', 'android']}},
         'quiet': False
     }
     try:
@@ -65,7 +64,7 @@ def download_short(video_id):
             return True
         return False
     except Exception as e:
-        print(f"[ERROR] خطأ في التحميل (قد يكون فيديو طويل وليس شورتس): {e}")
+        print(f"[ERROR] خطأ في التحميل: {e}")
         return False
 
 def upload_to_tiktok(video_path, title):
@@ -107,7 +106,7 @@ def main():
             os.remove(VIDEO_FILENAME)
             print(f"[CLEANUP] تم رفع وحذف الفيديو {VIDEO_FILENAME} وتحديث السجل.")
     else:
-        print("[SKIP] تم تخطي الفيديو (ربما ليس شورتس). تسجيله لتجاهله مستقبلاً.")
+        print("[SKIP] تم تخطي الفيديو (ربما ليس شورتس أو فشل التحميل). تسجيله لتجاهله مستقبلاً.")
         save_to_history(video_id)
 
 if __name__ == "__main__":
