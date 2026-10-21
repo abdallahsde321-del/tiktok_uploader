@@ -27,7 +27,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install google-api-python-client yt-dlp tiktok-uploader
+          pip install --upgrade --pre yt-dlp yt-dlp-ejs
+          pip install google-api-python-client tiktok-uploader
           playwright install chromium
 
       - name: Setup Cookies
