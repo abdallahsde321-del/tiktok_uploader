@@ -26,6 +26,7 @@ def fetch_channel_videos():
     ydl_opts = {
         'extract_flat': True,
         'quiet': True,
+        'impersonate': 'chrome',
     }
     
     video_urls = []
@@ -50,8 +51,14 @@ def download_video(video_url):
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'best/best',
-        'quiet': False
+        'quiet': False,
+        # محاكاة متصفح حقيقي لتخطي حظر تيك توك على السيرفرات السحابية
+        'impersonate': 'chrome',
     }
+
+    # استخدام كوكيز تيك توك أثناء التحميل لتخطي حماية السيرفرات
+    if os.path.exists("cookies.txt") and os.path.getsize("cookies.txt") > 0:
+        ydl_opts['cookiefile'] = 'cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -76,7 +83,7 @@ def upload_to_tiktok(video_path, title, schedule_time=None):
     if schedule_time:
         formatted_time = schedule_time.strftime("%Y-%m-%d %H:%M")
         command.extend(["-s", formatted_time])
-        print(f"[SCHEDULE] سيتم جدولة الفيديو ليُنشر في: {formatted_time}")
+        print(f"[SCHEDULE] تم جدولة الفيديو ليُنشر في: {formatted_time}")
     else:
         print(f"[PUBLIC] سيتم نشر الفيديو للعامة فوراً.")
 
