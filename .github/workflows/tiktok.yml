@@ -33,8 +33,10 @@ jobs:
       - name: Setup Cookies
         env:
           TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
           echo "$TIKTOK_COOKIES" > cookies.txt
+          echo "$YOUTUBE_COOKIES" > youtube_cookies.txt
 
       - name: Run Auto Uploader
         env:
