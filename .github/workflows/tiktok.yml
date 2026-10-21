@@ -1,0 +1,46 @@
+name: TikTok Shorts Auto-Uploader
+
+on:
+  schedule:
+    # التشغيل كل 6 ساعات
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  upload-job:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install google-api-python-client yt-dlp tiktok-uploader
+          playwright install chromium
+
+      - name: Setup Cookies
+        env:
+          TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
+        run: |
+          echo "$TIKTOK_COOKIES" > cookies.txt
+
+      - name: Run Auto Uploader
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python main.py
+
+      - name: Commit and Push History
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add history.txt
+          git commit -m "Update uploaded videos history" || echo "No changes to commit"
+          git push
