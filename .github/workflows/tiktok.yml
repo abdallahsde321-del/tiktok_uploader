@@ -2,8 +2,9 @@ name: TikTok Shorts Auto-Uploader
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    # يعمل تلقائياً كل 25 يوم لضمان إعادة ملء جدول الشهر الجديد قبل نفاد الفيديوهات
+    - cron: '0 0 */25 * *'
+  workflow_dispatch: 
 
 jobs:
   upload-job:
@@ -39,10 +40,9 @@ jobs:
       - name: Setup Cookies
         env:
           TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
-          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
           echo "$TIKTOK_COOKIES" > cookies.txt
-          echo "$YOUTUBE_COOKIES" > youtube_cookies.txt
+          touch youtube_cookies.txt
 
       - name: Run Auto Uploader
         env:
