@@ -51,12 +51,13 @@ def download_short(video_id):
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'match_filter': yt_dlp.utils.match_filter_func("duration <= 180"),
+        # تمت إزالة فلتر الوقت نهائياً، سيتم تحميل أي فيديو بغض النظر عن مدته
+        'js_runtimes': 'deno,node', # إضافة دعم فك التشفير
         'quiet': False
     }
     
-    # تفعيل الكوكيز الخاصة بيوتيوب إذا كان الملف موجوداً
-    if os.path.exists("youtube_cookies.txt"):
+    # سيستخدم الكوكيز فقط إذا قمت بتحديثها، وإلا سيعتمد على Deno
+    if os.path.exists("youtube_cookies.txt") and os.path.getsize("youtube_cookies.txt") > 0:
         ydl_opts['cookiefile'] = 'youtube_cookies.txt'
 
     try:
@@ -75,7 +76,7 @@ def upload_to_tiktok(video_path, title):
     command = [
         "tiktok-uploader",
         "-v", video_path,
-        "-d", f"{title} #shorts #fyp",
+        "-d", f"{title} #fyp",
         "-c", "cookies.txt"
     ]
     result = subprocess.run(command, capture_output=True, text=True)
@@ -109,7 +110,7 @@ def main():
             os.remove(VIDEO_FILENAME)
             print(f"[CLEANUP] تم رفع وحذف الفيديو {VIDEO_FILENAME} وتحديث السجل.")
     else:
-        print("[SKIP] تم تخطي الفيديو (فشل التحميل أو أطول من 3 دقائق). تسجيله لتجاهله مستقبلاً.")
+        print("[SKIP] تم تخطي الفيديو (فشل التحميل). تسجيله لتجاهله مستقبلاً.")
         save_to_history(video_id)
 
 if __name__ == "__main__":
