@@ -12,22 +12,33 @@ VIDEO_FILENAME = "video_to_upload.mp4"
 def get_downloaded_history():
     if not os.path.exists(HISTORY_FILE):
         return []
-    with open(HISTORY_FILE, "r") as f:
+    with open(HISTORY_FILE, "r", encoding="utf-8", errors="ignore") as f:
         return f.read().splitlines()
 
 def save_to_history(video_id):
-    with open(HISTORY_FILE, "a") as f:
+    with open(HISTORY_FILE, "a", encoding="utf-8") as f:
         f.write(video_id + "\n")
 
 def get_videos_from_list():
-    """قراءة الروابط أو المعرفات من ملف links.txt وتخطي ما تم رفعه مسبقاً"""
+    """قراءة الروابط من links.txt مع دعم كافة ترميزات الملفات لتجنب أخطاء UnicodeDecodeError"""
     if not os.path.exists(LINKS_FILE):
         print("[FATAL] ملف links.txt غير موجود!")
         return []
     
-    with open(LINKS_FILE, "r") as f:
-        lines = [line.strip() for line in f if line.strip()]
+    lines = []
+    # تجربة قراءة الملف بترميزات مختلفة لتفادي أي مشكلة في الحفظ
+    for encoding in ["utf-8", "utf-16", "latin-1", "cp1256"]:
+        try:
+            with open(LINKS_FILE, "r", encoding=encoding) as f:
+                lines = [line.strip() for line in f if line.strip()]
+            break
+        except UnicodeDecodeError:
+            continue
     
+    if not lines:
+        print("[FATAL] لم يتمكن السكربت من قراءة ملف links.txt بسبب الترميز.")
+        return []
+
     videos = []
     history = get_downloaded_history()
     
