@@ -2,6 +2,7 @@ import os
 import subprocess
 from googleapiclient.discovery import build
 import yt_dlp
+from datetime import datetime, timedelta
 
 # ================= الإعدادات =================
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
@@ -22,7 +23,7 @@ def save_to_history(video_id):
     with open(HISTORY_FILE, "a") as f:
         f.write(video_id + "\n")
 
-def get_unuploaded_videos(history):
+def get_unuploaded_videos(history, max_videos=180):
     youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
     
     request = youtube.playlistItems().list(
@@ -33,21 +34,24 @@ def get_unuploaded_videos(history):
     response = request.execute()
     
     if not response.get("items"):
-        return None, None
+        return []
 
     items = reversed(response["items"]) 
+    new_videos = []
     
     for item in items:
         video_id = item["snippet"]["resourceId"]["videoId"]
         title = item["snippet"]["title"]
         
         if video_id not in history:
-            return video_id, title
-            
-    return None, None
+            new_videos.append({"id": video_id, "title": title})
+            if len(new_videos) >= max_videos:
+                break
+                
+    return new_videos
 
-def download_short(video_id):
-    print(f"[DOWNLOAD] جاري فحص وتحميل الفيديو: {video_id}...")
+def download_video(video_id):
+    print(f"[DOWNLOAD] جاري تحميل الفيديو: {video_id}...")
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
@@ -69,17 +73,25 @@ def download_short(video_id):
         print(f"[ERROR] خطأ في التحميل: {e}")
         return False
 
-def upload_to_tiktok(video_path, title):
+def upload_to_tiktok(video_path, title, schedule_time=None):
     print(f"[UPLOAD] جاري الرفع إلى تيك توك: {title}...")
     command = [
         "tiktok-uploader",
         "-v", video_path,
-        "-d", f"{title} #fyp",
+        "-d", title,
         "-c", "cookies.txt"
     ]
+    
+    if schedule_time:
+        formatted_time = schedule_time.strftime("%Y-%m-%d %H:%M")
+        command.extend(["-s", formatted_time])
+        print(f"[SCHEDULE] تم جدولة الفيديو ليُنشر في: {formatted_time}")
+    else:
+        print(f"[PUBLIC] سيتم نشر الفيديو للعامة فوراً.")
+
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode == 0:
-        print("[UPLOAD] تم الرفع بنجاح!")
+        print("[UPLOAD] تم الرفع والجدولة بنجاح!")
         return True
     else:
         print(f"[ERROR] فشل الرفع: {result.stderr}")
@@ -91,25 +103,47 @@ def main():
         return
 
     history = get_downloaded_history()
-    video_id, title = get_unuploaded_videos(history)
+    videos_to_upload = get_unuploaded_videos(history, max_videos=180)
     
-    if not video_id:
+    if not videos_to_upload:
         print("لا يوجد فيديوهات جديدة لرفعها.")
         return
         
-    print(f"تم العثور على فيديو جديد! المعرف: {video_id} | العنوان: {title}")
+    print(f"تم العثور على {len(videos_to_upload)} فيديو. البدء في معالجتها وجدولتها لتغطي شهر كاملاً...")
     
-    is_downloaded = download_short(video_id)
+    now = datetime.now()
     
-    if is_downloaded:
-        success = upload_to_tiktok(VIDEO_FILENAME, title)
-        if success:
-            save_to_history(video_id)
-            os.remove(VIDEO_FILENAME)
-            print(f"[CLEANUP] تم رفع وحذف الفيديو {VIDEO_FILENAME} وتحديث السجل.")
-    else:
-        print("[SKIP] تم تخطي الفيديو (فشل التحميل). تسجيله لتجاهله مستقبلاً.")
-        save_to_history(video_id)
+    for index, vid in enumerate(videos_to_upload):
+        v_id = vid["id"]
+        title = vid["title"]
+        
+        print(f"\n--- معالجة الفيديو ({index + 1}/{len(videos_to_upload)}): {title} ({v_id}) ---")
+        
+        is_downloaded = download_video(v_id)
+        
+        if is_downloaded:
+            # توزيع الـ 180 فيديو على مدار الشهر (بمعدل 6 فيديوهات يومياً = فاصل 4 ساعات بين كل فيديو والذي يليه)
+            if index == 0:
+                schedule_time = None # أول فيديو ينشر فوراً
+            else:
+                schedule_time = now + timedelta(hours=4 * index)
+                
+            success = upload_to_tiktok(VIDEO_FILENAME, title, schedule_time)
+            
+            if success:
+                save_to_history(v_id)
+                os.remove(VIDEO_FILENAME)
+                print(f"[CLEANUP] تم حذف الفيديو {VIDEO_FILENAME} من الخادم.")
+            else:
+                print(f"[WARN] فشل رفع {v_id}. تسجيله لتخطيه.")
+                save_to_history(v_id)
+                if os.path.exists(VIDEO_FILENAME):
+                    os.remove(VIDEO_FILENAME)
+        else:
+            print(f"[SKIP] تخطي الفيديو {v_id} بسبب فشل التحميل.")
+            save_to_history(v_id)
+
+    print(f"\n=== انتهت عملية رفع وجدولة الـ 180 فيديو لتغطي الشهر بالكامل بنجاح! ===")
 
 if __name__ == "__main__":
     main()
