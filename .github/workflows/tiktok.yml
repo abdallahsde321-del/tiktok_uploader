@@ -15,10 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js v22 (Required by yt-dlp)
+      - name: Set up Node.js v22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Set up Deno v2.x
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Set up Python
         uses: actions/setup-python@v5
