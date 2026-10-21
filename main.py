@@ -4,7 +4,7 @@ import yt_dlp
 from datetime import datetime, timedelta
 
 # ================= الإعدادات =================
-LINKS_FILE = "links.txt"
+SOURCE_CHANNEL = "https://www.tiktok.com/@haitham.talaat01"
 HISTORY_FILE = "history.txt"
 VIDEO_FILENAME = "video_to_upload.mp4"
 # =============================================
@@ -19,50 +19,43 @@ def save_to_history(video_id):
     with open(HISTORY_FILE, "a", encoding="utf-8") as f:
         f.write(video_id + "\n")
 
-def get_videos_from_list():
-    """قراءة الروابط من links.txt مع دعم كافة ترميزات الملفات لتجنب أخطاء UnicodeDecodeError"""
-    if not os.path.exists(LINKS_FILE):
-        print("[FATAL] ملف links.txt غير موجود!")
-        return []
+def fetch_channel_videos():
+    """سحب جميع روابط فيديوهات القناة تلقائياً مباشرة بدون ملفات خارجية"""
+    print(f"[FETCH] جاري سحب روابط الفيديوهات من القناة: {SOURCE_CHANNEL}...")
     
-    lines = []
-    # تجربة قراءة الملف بترميزات مختلفة لتفادي أي مشكلة في الحفظ
-    for encoding in ["utf-8", "utf-16", "latin-1", "cp1256"]:
-        try:
-            with open(LINKS_FILE, "r", encoding=encoding) as f:
-                lines = [line.strip() for line in f if line.strip()]
-            break
-        except UnicodeDecodeError:
-            continue
+    ydl_opts = {
+        'extract_flat': True,
+        'quiet': True,
+    }
     
-    if not lines:
-        print("[FATAL] لم يتمكن السكربت من قراءة ملف links.txt بسبب الترميز.")
-        return []
-
-    videos = []
+    video_urls = []
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info(SOURCE_CHANNEL, download=False)
+            if 'entries' in result:
+                for entry in result['entries']:
+                    url = entry.get('url') or f"https://www.tiktok.com/@haitham.talaat01/video/{entry.get('id')}"
+                    video_urls.append(url)
+    except Exception as e:
+        print(f"[ERROR] خطأ في جلب الفيديوهات من القناة: {e}")
+        
+    # تصفية الفيديوهات التي تم رفعها مسبقاً
     history = get_downloaded_history()
+    new_videos = [url for url in video_urls if url not in history]
     
-    for line in lines:
-        vid_id = line.split("v=")[-1].split("/")[-1]
-        if vid_id not in history:
-            videos.append(vid_id)
-            if len(videos) >= 180:
-                break
-    return videos
+    return new_videos
 
-def download_video(video_id):
-    print(f"[DOWNLOAD] جاري تحميل الفيديو: {video_id}...")
-    url = f"https://www.youtube.com/watch?v={video_id}"
+def download_video(video_url):
+    print(f"[DOWNLOAD] جاري تحميل الفيديو: {video_url}...")
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
-        'format': 'best[ext=mp4]/best',
-        'js_runtimes': {'deno': {}, 'node': {}},
+        'format': 'best/best',
         'quiet': False
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            ydl.download([video_url])
         
         if os.path.exists(VIDEO_FILENAME):
             return True
@@ -96,45 +89,51 @@ def upload_to_tiktok(video_path, title, schedule_time=None):
         return False
 
 def main():
-    video_ids = get_videos_from_list()
+    video_urls = fetch_channel_videos()
     
-    if not video_ids:
-        print("لا توجد فيديوهات جديدة في ملف links.txt للرفع.")
+    if not video_urls:
+        print("لا توجد فيديوهات جديدة لرفعها أو حدث خطأ في السحب.")
         return
         
-    print(f"تم العثور على {len(video_ids)} فيديو في القائمة. البدء في معالجتها وجدولتها...")
-    now = datetime.now()
+    total_videos = len(video_urls)
+    print(f"تم العثور على {total_videos} فيديو. البدء في جدولتها لتغطي شهر كاملاً...")
     
-    for index, v_id in enumerate(video_ids):
-        print(f"\n--- معالجة الفيديو ({index + 1}/{len(video_ids)}): {v_id} ---")
+    now = datetime.now()
+    # توزيع الفيديوهات على مدار 30 يوماً (720 ساعة) بفاصل زمني دقيق
+    total_minutes_in_month = 30 * 24 * 60
+    interval_minutes = total_minutes_in_month / total_videos if total_videos > 0 else 64
+    
+    print(f"[INFO] الفاصل الزمني بين كل فيديو والذي يليه: {round(interval_minutes, 1)} دقيقة.")
+
+    for index, v_url in enumerate(video_urls):
+        print(f"\n--- معالجة الفيديو ({index + 1}/{total_videos}) ---")
         
-        is_downloaded = download_video(v_id)
+        is_downloaded = download_video(v_url)
         
         if is_downloaded:
             title = f"Shorts #{index + 1}"
             
-            # توزيع الـ 180 فيديو على مدار الشهر (6 فيديوهات يومياً - فاصل 4 ساعات)
             if index == 0:
                 schedule_time = None 
             else:
-                schedule_time = now + timedelta(hours=4 * index)
+                schedule_time = now + timedelta(minutes=interval_minutes * index)
                 
             success = upload_to_tiktok(VIDEO_FILENAME, title, schedule_time)
             
             if success:
-                save_to_history(v_id)
+                save_to_history(v_url)
                 os.remove(VIDEO_FILENAME)
-                print(f"[CLEANUP] تم حذف الفيديو {VIDEO_FILENAME} من الخادم.")
+                print(f"[CLEANUP] تم حذف الفيديو المؤقت من الخادم.")
             else:
-                print(f"[WARN] فشل رفع {v_id}. تسجيله لتخطيه.")
-                save_to_history(v_id)
+                print(f"[WARN] فشل رفع الفيديو. تسجيله لتخطيه.")
+                save_to_history(v_url)
                 if os.path.exists(VIDEO_FILENAME):
                     os.remove(VIDEO_FILENAME)
         else:
-            print(f"[SKIP] تخطي الفيديو {v_id} بسبب فشل التحميل.")
-            save_to_history(v_id)
+            print(f"[SKIP] تخطي الفيديو بسبب فشل التحميل.")
+            save_to_history(v_url)
 
-    print(f"\n=== انتهت العملية بنجاح! ===")
+    print(f"\n=== انتهت العملية بنجاح وتوزيع الفيديوهات على الشهر كاملاً! ===")
 
 if __name__ == "__main__":
     main()
