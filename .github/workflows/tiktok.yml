@@ -1,8 +1,6 @@
 name: TikTok Shorts Auto-Uploader
 
 on:
-  schedule:
-    - cron: '0 0 */25 * *'
   workflow_dispatch: 
 
 jobs:
@@ -33,20 +31,16 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install --upgrade --pre yt-dlp yt-dlp-ejs
-          pip install google-api-python-client tiktok-uploader
+          pip install tiktok-uploader
           playwright install chromium
 
       - name: Setup Cookies
         env:
           TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
-          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
           echo "$TIKTOK_COOKIES" > cookies.txt
-          echo "$YOUTUBE_COOKIES" > youtube_cookies.txt
 
       - name: Run Auto Uploader
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python main.py
 
       - name: Commit and Push History
