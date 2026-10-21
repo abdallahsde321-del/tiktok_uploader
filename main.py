@@ -1,14 +1,10 @@
 import os
 import subprocess
-from googleapiclient.discovery import build
 import yt_dlp
 from datetime import datetime, timedelta
 
 # ================= الإعدادات =================
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
-YOUTUBE_CHANNEL_ID = "UC04ZxFjp6c-6QeReK4JVcjQ"
-UPLOADS_PLAYLIST_ID = YOUTUBE_CHANNEL_ID.replace("UC", "UU", 1)
-
+LINKS_FILE = "links.txt"
 HISTORY_FILE = "history.txt"
 VIDEO_FILENAME = "video_to_upload.mp4"
 # =============================================
@@ -23,48 +19,39 @@ def save_to_history(video_id):
     with open(HISTORY_FILE, "a") as f:
         f.write(video_id + "\n")
 
-def get_unuploaded_videos(history, max_videos=180):
-    youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-    
-    request = youtube.playlistItems().list(
-        part="snippet",
-        playlistId=UPLOADS_PLAYLIST_ID,
-        maxResults=50
-    )
-    response = request.execute()
-    
-    if not response.get("items"):
+def get_videos_from_list():
+    """قراءة الروابط أو المعرفات من ملف links.txt وتخطي ما تم رفعه مسبقاً"""
+    if not os.path.exists(LINKS_FILE):
+        print("[FATAL] ملف links.txt غير موجود!")
         return []
-
-    items = reversed(response["items"]) 
-    new_videos = []
     
-    for item in items:
-        video_id = item["snippet"]["resourceId"]["videoId"]
-        title = item["snippet"]["title"]
-        
-        if video_id not in history:
-            new_videos.append({"id": video_id, "title": title})
-            if len(new_videos) >= max_videos:
+    with open(LINKS_FILE, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]
+    
+    videos = []
+    history = get_downloaded_history()
+    
+    for line in lines:
+        vid_id = line.split("v=")[-1].split("/")[-1]
+        if vid_id not in history:
+            videos.append(vid_id)
+            if len(videos) >= 180:
                 break
-                
-    return new_videos
+    return videos
 
 def download_video(video_id):
     print(f"[DOWNLOAD] جاري تحميل الفيديو: {video_id}...")
+    url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
         'outtmpl': VIDEO_FILENAME,
-        'format': 'best[ext=mp4]/best', # تحميل فيديو جاهز بصيغة mp4 بدون الحاجة لدمج ffmpeg
+        'format': 'best[ext=mp4]/best',
         'js_runtimes': {'deno': {}, 'node': {}},
         'quiet': False
     }
-    
-    if os.path.exists("youtube_cookies.txt") and os.path.getsize("youtube_cookies.txt") > 0:
-        ydl_opts['cookiefile'] = 'youtube_cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([f"https://www.youtube.com/watch?v={video_id}"])
+            ydl.download([url])
         
         if os.path.exists(VIDEO_FILENAME):
             return True
@@ -74,7 +61,7 @@ def download_video(video_id):
         return False
 
 def upload_to_tiktok(video_path, title, schedule_time=None):
-    print(f"[UPLOAD] جاري الرفع إلى تيك توك: {title}...")
+    print(f"[UPLOAD] جاري الرفع إلى تيك توك...")
     command = [
         "tiktok-uploader",
         "-v", video_path,
@@ -85,7 +72,7 @@ def upload_to_tiktok(video_path, title, schedule_time=None):
     if schedule_time:
         formatted_time = schedule_time.strftime("%Y-%m-%d %H:%M")
         command.extend(["-s", formatted_time])
-        print(f"[SCHEDULE] تم جدولة الفيديو ليُنشر في: {formatted_time}")
+        print(f"[SCHEDULE] سيتم جدولة الفيديو ليُنشر في: {formatted_time}")
     else:
         print(f"[PUBLIC] سيتم نشر الفيديو للعامة فوراً.")
 
@@ -98,30 +85,24 @@ def upload_to_tiktok(video_path, title, schedule_time=None):
         return False
 
 def main():
-    if not YOUTUBE_API_KEY:
-        print("[FATAL] YOUTUBE_API_KEY is not set.")
-        return
-
-    history = get_downloaded_history()
-    videos_to_upload = get_unuploaded_videos(history, max_videos=180)
+    video_ids = get_videos_from_list()
     
-    if not videos_to_upload:
-        print("لا يوجد فيديوهات جديدة لرفعها.")
+    if not video_ids:
+        print("لا توجد فيديوهات جديدة في ملف links.txt للرفع.")
         return
         
-    print(f"تم العثور على {len(videos_to_upload)} فيديو. البدء في معالجتها وجدولتها...")
-    
+    print(f"تم العثور على {len(video_ids)} فيديو في القائمة. البدء في معالجتها وجدولتها...")
     now = datetime.now()
     
-    for index, vid in enumerate(videos_to_upload):
-        v_id = vid["id"]
-        title = vid["title"]
-        
-        print(f"\n--- معالجة الفيديو ({index + 1}/{len(videos_to_upload)}): {title} ({v_id}) ---")
+    for index, v_id in enumerate(video_ids):
+        print(f"\n--- معالجة الفيديو ({index + 1}/{len(video_ids)}): {v_id} ---")
         
         is_downloaded = download_video(v_id)
         
         if is_downloaded:
+            title = f"Shorts #{index + 1}"
+            
+            # توزيع الـ 180 فيديو على مدار الشهر (6 فيديوهات يومياً - فاصل 4 ساعات)
             if index == 0:
                 schedule_time = None 
             else:
