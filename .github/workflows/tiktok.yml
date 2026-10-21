@@ -1,4 +1,4 @@
-name: TikTok Shorts Auto-Uploader
+name: TikTok Auto Migration & Schedule
 
 on:
   workflow_dispatch: 
@@ -18,11 +18,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Set up Deno v2.x
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -30,7 +25,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install --upgrade --pre yt-dlp yt-dlp-ejs
+          pip install --upgrade --pre yt-dlp
           pip install tiktok-uploader
           playwright install chromium
 
@@ -40,7 +35,7 @@ jobs:
         run: |
           echo "$TIKTOK_COOKIES" > cookies.txt
 
-      - name: Run Auto Uploader
+      - name: Run Auto Migration
         run: python main.py
 
       - name: Commit and Push History
@@ -48,5 +43,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add history.txt
-          git commit -m "Update uploaded videos history" || echo "No changes to commit"
+          git commit -m "Update migrated videos history" || echo "No changes to commit"
           git push
